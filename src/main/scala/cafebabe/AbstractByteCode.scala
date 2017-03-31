@@ -84,6 +84,10 @@ object AbstractByteCodes {
 
   /** Generates code to load constants, using the appropriate method depending on the values. */
   object Ldc {
+    def apply(n: Null): AbstractByteCodeGenerator = ((ch: CodeHandler) => {
+      ch << ACONST_NULL
+    })
+
     def apply(i: Int): AbstractByteCodeGenerator = ((ch: CodeHandler) => {
       i match {
         case -1 => ch << ICONST_M1
@@ -321,4 +325,3 @@ object AbstractByteCodes {
     override def toStream(bs: ByteStream): ByteStream = bs
   }
 }
-

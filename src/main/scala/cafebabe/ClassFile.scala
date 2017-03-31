@@ -121,6 +121,17 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
     mh
   }
 
+  def addStaticBlock: MethodHandler = {
+    val accessFlags = Flags.METHOD_ACC_STATIC
+    val nameIndex = constantPool.addString(staticConstructorName)
+    val descriptorIndex = constantPool.addString("()V")
+
+    val code = CodeAttributeInfo(codeNameIndex)
+    val inf = MethodInfo(accessFlags, nameIndex, descriptorIndex, List(code))
+    methods = methods ::: (inf :: Nil)
+    new MethodHandler(inf, code, constantPool, "")
+  }
+
   /** Writes the binary representation of this class file to a file. */
   def writeToFile(fileName : String) {
     // The stream we'll ultimately use to write the class file data
@@ -151,5 +162,3 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
 
   def stringToDescriptor(s: String) = s
 }
-
-
