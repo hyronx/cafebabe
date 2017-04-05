@@ -1,12 +1,17 @@
 package cafebabe
 
-/** A <code>ClassFile</code> object is an abstract representation of all the
+/**
+ * A <code>ClassFile</code> object is an abstract representation of all the
  * information that will be written to a <code>.class</code> file.  In the Java
  * model, that generally corresponds to one class (or interface) as declared in
- * source code, however this is by no means a restriction of the platform. */
+ * source code, however this is by no means a restriction of the platform.
+ */
 class ClassFile(val className: String, parentName: Option[String] = None) extends Streamable {
   import ClassFileTypes._
   import Defaults._
+
+  /** Needed for method overloading (see http://stackoverflow.com/questions/4982552/scala-method-overloading-over-generic-types) */
+  import scala.Predef.DummyImplicit
 
   private var magic: U4 = defaultMagic
   private var minor: U2 = defaultMinor
@@ -29,9 +34,12 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
   private var fields: List[FieldInfo] = Nil
   private var methods: List[MethodInfo] = Nil
   private var interfaces: List[InterfaceInfo] = Nil
-  private var attributes : List[AttributeInfo] = Nil
+  private var attributes: List[AttributeInfo] = Nil
 
-  def addInterface(name: String) {
+  def addInterface(classTpe: Class[_]): Unit =
+    addInterface(typeToClassName(classTpe))
+
+  def addInterface(name: String): Unit = {
     val nameIndex = constantPool.addClass(constantPool.addString(name))
 
     interfaces = InterfaceInfo(name, nameIndex) :: interfaces
@@ -39,8 +47,8 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
 
   private var _srcNameWasSet = false
   /** Attaches the name of the original source file to the class file. */
-  def setSourceFile(sf : String) : Unit = {
-    if(_srcNameWasSet) {
+  def setSourceFile(sf: String): Unit = {
+    if (_srcNameWasSet) {
       sys.error("Cannot set the source file attribute twice.")
     }
     _srcNameWasSet = true
@@ -49,10 +57,14 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
   }
 
   /** Sets the access flags for the class. */
-  def setFlags(flags : U2) : Unit = { accessFlags = flags }
+  def setFlags(flags: U2): Unit = { accessFlags = flags }
 
   /** Returns the currently set flags. */
-  def getFlags : U2 = accessFlags
+  def getFlags: U2 = accessFlags
+
+  /** Adds a field to the class, accepting a class as a type. */
+  def addField(tpe: Class[_], name: String): FieldHandler =
+    addField(typeToTypeRep(tpe), name)
 
   /** Adds a field to the class, using the default flags and no attributes. */
   def addField(tpe: String, name: String): FieldHandler = {
@@ -64,8 +76,12 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
     new FieldHandler(inf, constantPool)
   }
 
+  /** Adds a  method with arbitrarily many arguments, accepting classes as types. */
+  def addMethod(retTpe: Class[_], name: String, args: Class[_]*): MethodHandler =
+    addMethod(typeToTypeRep(retTpe), name, args.map(typeToTypeRep(_)).toList)
+
   /** Adds a method with arbitrarily many arguments, using the default flags and no attributes. */
-  def addMethod(retTpe: String, name: String, args: String*): MethodHandler = addMethod(retTpe,name,args.toList)
+  def addMethod(retTpe: String, name: String, args: String*): MethodHandler = addMethod(retTpe, name, args.toList)
 
   def addMethod(retTpe: String, name: String, args: List[String]): MethodHandler = {
     val concatArgs = args.mkString("")
@@ -79,7 +95,6 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
     val inf = MethodInfo(accessFlags, nameIndex, descriptorIndex, List(code))
     methods = methods ::: (inf :: Nil)
 
-
     new MethodHandler(inf, code, constantPool, concatArgs)
   }
 
@@ -90,15 +105,19 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
     handler
   }
 
-  /** Adds a constructor to the class. Constructor code should always start by invoking a constructor from the super class. */
-  def addConstructor(args : String*) : MethodHandler = addConstructor(args.toList)
+  /** Adds a constructor to the class, accepting classes as types. */
+  def addConstructor(args: Class[_]*)(implicit d: DummyImplicit): MethodHandler =
+    addConstructor(args.map(typeToTypeRep(_)).toList)
 
-  def addConstructor(args : List[String]) : MethodHandler = {
+  /** Adds a constructor to the class. Constructor code should always start by invoking a constructor from the super class. */
+  def addConstructor(args: String*): MethodHandler = addConstructor(args.toList)
+
+  def addConstructor(args: List[String]): MethodHandler = {
     val concatArgs = args.mkString("")
 
-    val accessFlags : U2 = Flags.METHOD_ACC_PUBLIC
-    val nameIndex : U2 = constantPool.addString(constructorName)
-    val descriptorIndex : U2 = constantPool.addString(
+    val accessFlags: U2 = Flags.METHOD_ACC_PUBLIC
+    val nameIndex: U2 = constantPool.addString(constructorName)
+    val descriptorIndex: U2 = constantPool.addString(
       "(" + concatArgs + ")V"
     )
     val code = CodeAttributeInfo(codeNameIndex)
@@ -113,7 +132,7 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
     import ByteCodes._
     import AbstractByteCodes._
 
-    val mh = addConstructor(Nil)
+    val mh = addConstructor(List.empty[String])
     mh.codeHandler << ALOAD_0
     mh.codeHandler << InvokeSpecial(superClassName, constructorName, "()V")
     mh.codeHandler << RETURN
@@ -133,14 +152,14 @@ class ClassFile(val className: String, parentName: Option[String] = None) extend
   }
 
   /** Writes the binary representation of this class file to a file. */
-  def writeToFile(fileName : String) {
+  def writeToFile(fileName: String) {
     // The stream we'll ultimately use to write the class file data
     val byteStream = new ByteStream
     byteStream << this
     byteStream.writeToFile(fileName)
   }
 
-  def registerWithClassLoader(classLoader : CafebabeClassLoader) {
+  def registerWithClassLoader(classLoader: CafebabeClassLoader) {
     classLoader.register(this)
   }
 
