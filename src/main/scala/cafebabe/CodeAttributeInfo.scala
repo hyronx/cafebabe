@@ -3,15 +3,15 @@ package cafebabe
 import ClassFileTypes._
 
 object CodeAttributeInfo {
-  def apply(codeNameIndex: U2) : CodeAttributeInfo =
+  def apply(codeNameIndex: U2): CodeAttributeInfo =
     new CodeAttributeInfo(codeNameIndex)
 
-  def unapply(cai: CodeAttributeInfo) : Option[U2] =
-    if(cai == null) None else Some(cai.codeNameIndex)
+  def unapply(cai: CodeAttributeInfo): Option[U2] =
+    if (cai == null) None else Some(cai.codeNameIndex)
 }
 
 class CodeAttributeInfo(val codeNameIndex: U2) extends AttributeInfo(codeNameIndex, Nil) {
-  var maxStack: U2 = 0  // gets set when the code handler 'freezes'
+  var maxStack: U2 = 0 // gets set when the code handler 'freezes'
   var maxLocals: U2 = 0 // gets set when the code handler 'freezes'
   var code: ByteStream = new ByteStream
 
@@ -27,13 +27,13 @@ class CodeAttributeInfo(val codeNameIndex: U2) extends AttributeInfo(codeNameInd
     val attributesCount: U2 = attributes.size.asInstanceOf[U2]
 
     val totalLength = size
-    stream << codeNameIndex << (totalLength-6).asInstanceOf[U4] << maxStack << maxLocals << codeLength << code
+    stream << codeNameIndex << (totalLength - 6).asInstanceOf[U4] << maxStack << maxLocals << codeLength << code
     stream << exceptionTableLength << exceptionTable
     stream << attributesCount << attributes
   }
 
   private def attributesSize: Int = {
-    attributes.foldLeft[Int](0)((s:Int, c:AttributeInfo) => { s + c.size })
+    attributes.foldLeft[Int](0)((s: Int, c: AttributeInfo) => { s + c.size })
   }
 
   override def size: Int = {

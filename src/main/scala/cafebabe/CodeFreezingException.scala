@@ -3,9 +3,9 @@ package cafebabe
 import ByteCodes._
 import AbstractByteCodes._
 
-case class CodeFreezingException(message : String, abstractByteCodes : Seq[AbstractByteCode] = Nil) extends Exception {
-  override def getMessage : String = {
-    if(abstractByteCodes.isEmpty) {
+case class CodeFreezingException(message: String, abstractByteCodes: Seq[AbstractByteCode] = Nil) extends Exception {
+  override def getMessage: String = {
+    if (abstractByteCodes.isEmpty) {
       message
     } else {
       val b = new StringBuilder()
@@ -13,7 +13,7 @@ case class CodeFreezingException(message : String, abstractByteCodes : Seq[Abstr
       b.append("\n")
 
       var pc = 0
-      for(abc <- abstractByteCodes) abc match {
+      for (abc <- abstractByteCodes) abc match {
         case Label(name) =>
           b.append(name)
           b.append(":\n")
