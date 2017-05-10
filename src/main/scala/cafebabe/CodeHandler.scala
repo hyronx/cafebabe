@@ -98,8 +98,9 @@ class CodeHandler private[cafebabe] (c: CodeAttributeInfo, cp: ConstantPool, val
     val abcList = abcBuffer.toList
     code.maxLocals = locals
 
-    val labels: MutableMap[String, Int] = MutableMap.empty
-    val lineInfo: MutableMap[Int, Int] = MutableMap.empty
+    val labels = MutableMap.empty[String, Int]
+    val lineInfo = MutableMap.empty[Int, Int]
+    val stackFrames = MutableMap.empty[Int, U1]
 
     // In the first pass, we collect the positions of all labels.
     // We also store line numbers information.
@@ -113,7 +114,10 @@ class CodeHandler private[cafebabe] (c: CodeAttributeInfo, cp: ConstantPool, val
             lastLineNumber = ln
             lineInfo(pc) = ln
           }
-          case Label(name) => labels(name) = pc
+          case Label(name) => {
+            labels(name) = pc
+            stackFrames(pc) = pc
+          }
           case _ => ;
         }
         pc = pc + abc.size
@@ -127,6 +131,7 @@ class CodeHandler private[cafebabe] (c: CodeAttributeInfo, cp: ConstantPool, val
         abc match {
           case co: ControlOperator => {
             co.offset = (labels.getOrElse(co.target, 0) - pc)
+            //stackFrames += 3
           }
           case _ => ;
         }
@@ -139,6 +144,15 @@ class CodeHandler private[cafebabe] (c: CodeAttributeInfo, cp: ConstantPool, val
       val lnta = new LineNumberTableAttributeInfo(constantPool.addString("LineNumberTable"))
       lnta.setEntries(lineInfo.toSeq)
       code.attributes = lnta +: code.attributes
+    }
+
+    // build the stack map table
+    if (!stackFrames.isEmpty) {
+      val smt = StackMapAttributeInfo(
+        constantPool.addString("StackMapTable"),
+        stackFrames.map(_._2).toSeq
+      )
+      code.attributes = smt +: code.attributes
     }
 
     // we now compute the maximum stack height.

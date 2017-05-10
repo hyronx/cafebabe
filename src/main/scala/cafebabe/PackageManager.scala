@@ -1,6 +1,6 @@
 package cafebabe
 
-class Package(val name: String, packages: Seq[Package] = Seq()) {
+class PackageManager(val name: String, packages: Seq[PackageManager] = Seq()) {
   import scala.collection.mutable.ListBuffer
   import java.nio.file.{ Path, Paths }
 
@@ -22,8 +22,8 @@ class Package(val name: String, packages: Seq[Package] = Seq()) {
     classes find (_.className == s"$javaName/$name")
   }
 
-  def addSubPackage(name: String, packages: Seq[Package] = Seq()) = {
-    val pkg = new Package(s"${this.name}.${name}", packages)
+  def addSubPackage(name: String, packages: Seq[PackageManager] = Seq()) = {
+    val pkg = new PackageManager(s"${this.name}.${name}", packages)
     subPackages += pkg
     pkg
   }
@@ -32,7 +32,7 @@ class Package(val name: String, packages: Seq[Package] = Seq()) {
 
   def writeTo(dir: Path): Unit = {
     // Convert package name (e.g. com.blah.blah) to path (e.g. com/blah/blah)
-    var namePath = {
+    val namePath = {
       if (javaName.contains('/')) {
         val parts = javaName.split('/')
         Paths.get(parts.head, parts.tail: _*)
