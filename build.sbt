@@ -2,8 +2,8 @@
 lazy val root = (project in file("."))
   .settings(
     name := "Cafebabe",
-    version := "1.2.2",
-    scalaVersion := "2.12.2",
+    version := "1.2.3",
+    scalaVersion := "2.12.3",
     crossScalaVersions := Seq("2.11.8", "2.12.1"),
     scalacOptions += "-deprecation",
     scalacOptions += "-unchecked",
